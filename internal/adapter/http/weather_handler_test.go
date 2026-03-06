@@ -1,7 +1,6 @@
 package http_test
 
 import (
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -57,11 +56,11 @@ func TestWeatherHandler_HandleInvalidCEP(t *testing.T) {
 	mockUseCase := new(MockGetTemperatureByCEPUseCase)
 
 	mockUseCase.On("Execute", mock.MatchedBy(func(input *dto.GetTemperatureByCEPInput) bool {
-		return input.CEP == "invalid"
-	})).Return(nil, errors.New("invalid zipcode")).Once()
+		return input.CEP == "12345"
+	})).Return(nil, &entity.InvalidCEPError{Message: "CEP must have 8 digits"}).Once()
 
 	handler := httpAdapter.NewWeatherHandler(mockUseCase)
-	req := httptest.NewRequest("GET", "/?cep=invalid", nil)
+	req := httptest.NewRequest("GET", "/?cep=12345", nil)
 	w := httptest.NewRecorder()
 
 	handler.Handle(w, req)

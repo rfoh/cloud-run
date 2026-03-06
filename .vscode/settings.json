@@ -1,0 +1,12 @@
+{
+  "go.lintOnSave": "package",
+  "go.buildOnSave": "off",
+  "[go]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "golang.go"
+  },
+  "go.testTags": "e2e",
+  "go.testTimeout": "30s",
+  "go.coverOnSingleTest": true,
+  "go.coverOnTestPackage": true
+}

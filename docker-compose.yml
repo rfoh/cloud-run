@@ -1,0 +1,93 @@
+version: '3.8'
+
+services:
+  # Serviço para executar os testes unitários
+  test-unit:
+    image: golang:1.25.4-alpine
+    container_name: weather-app-unit-tests
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: go test -v ./internal/... -coverprofile=coverage.out
+    environment:
+      CGO_ENABLED: 0
+
+  # Serviço para executar toda a cobertura de testes
+  test-coverage:
+    image: golang:1.25.4-alpine
+    container_name: weather-app-coverage
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: |
+      sh -c 'go test -v ./internal/... -coverprofile=coverage.out && 
+             go tool cover -html=coverage.out -o coverage.html &&
+             echo "Coverage report generated at coverage.html"'
+    environment:
+      CGO_ENABLED: 0
+    depends_on:
+      - test-unit
+
+  # Serviço para buildar a imagem da aplicação
+  build-app:
+    image: golang:1.25.4-alpine
+    container_name: weather-app-build
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: |
+      sh -c 'CGO_ENABLED=0 GOOS=linux go build -o server main.go &&
+             echo "Build successful! Binary: server"'
+    environment:
+      CGO_ENABLED: 0
+
+  # Serviço para executar a aplicação
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: weather-app
+    ports:
+      - "${PORT}:${PORT}"
+    env_file:
+      - .env
+    environment:
+      PORT: ${PORT}
+      WEATHER_API_KEY: ${WEATHER_API_KEY}
+    depends_on:
+      - build-app
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "sh", "-c", "kill -0 1"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  # Serviço para testes de integração com a aplicação em execução
+  test-e2e:
+    image: golang:1.25.4-alpine
+    container_name: weather-app-e2e-tests
+    working_dir: /app
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      CGO_ENABLED: 0
+      APP_URL: "http://app:${PORT}"
+    command: |
+      sh -c 'apk add --no-cache curl wget &&
+             echo "Waiting for app to start..." &&
+             sleep 15 &&
+             echo "App should be ready! Running E2E tests..." &&
+             go test -v -tags=e2e ./e2e_test.go'
+    depends_on:
+      - app
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

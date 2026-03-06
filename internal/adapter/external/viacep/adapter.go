@@ -15,7 +15,7 @@ type viaCEPResponse struct {
 	CEP   string `json:"cep"`
 	City  string `json:"localidade"`
 	State string `json:"uf"`
-	Error bool   `json:"erro"`
+	Error string `json:"erro"`
 }
 
 type ViaCEPAdapter struct {
@@ -44,7 +44,7 @@ func (a *ViaCEPAdapter) FindLocationByCEP(cep *entity.CEP) (*entity.Location, er
 		return nil, err
 	}
 
-	if data.Error || data.City == "" {
+	if data.Error == "true" || data.City == "" {
 		return nil, &entity.CEPNotFoundError{CEP: cep.Value()}
 	}
 

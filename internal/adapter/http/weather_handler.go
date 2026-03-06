@@ -42,12 +42,15 @@ func (h *WeatherHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 
-		if errors.Is(err, &entity.CEPNotFoundError{}) {
-			w.WriteHeader(http.StatusNotFound)
-			json.NewEncoder(w).Encode(errorResponse{Message: "can not find zipcode"})
-		} else if errors.Is(err, &entity.InvalidCEPError{}) {
+		var invalidCEPErr *entity.InvalidCEPError
+		var notFoundErr *entity.CEPNotFoundError
+
+		if errors.As(err, &invalidCEPErr) {
 			w.WriteHeader(http.StatusUnprocessableEntity)
 			json.NewEncoder(w).Encode(errorResponse{Message: "invalid zipcode"})
+		} else if errors.As(err, &notFoundErr) {
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(errorResponse{Message: "can not find zipcode"})
 		} else {
 			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(errorResponse{Message: "unknown error"})
